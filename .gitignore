@@ -1,3 +1,13 @@
+# Data files
+data/
+
+# Experiments output
+outputs/
+output/
+# Experiments configurations
+config/*
+!config/example.yml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
