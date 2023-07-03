@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from src.experiments.autoencoder.config import ModelConfig, Activation
+from .config import ModelConfig, Activation
 from src.utils.blocks import *
 
 
@@ -11,7 +11,7 @@ _activation_dict = {
 }
 
 
-class AutoEncoder(nn.Module):
+class Model(nn.Module):
     def __init__(self, cfg: ModelConfig):
         super().__init__()
         self._cfg = cfg
@@ -50,3 +50,11 @@ class AutoEncoder(nn.Module):
         for layer in self._layers:
             x = layer(x)
         return x
+
+
+if __name__ == '__main__':
+    cfg = ModelConfig()
+    model = Model(cfg)
+    x = torch.rand((2, 2, 256, 256))
+    y_hat = model(x)
+    print("output_shape:", y_hat.shape)

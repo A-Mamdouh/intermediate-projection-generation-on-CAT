@@ -4,10 +4,10 @@ from torch.utils.data import Dataset
 import torch
 from torchvision.transforms.functional import pil_to_tensor
 from PIL import Image
-from src.experiments.autoencoder.config import DatasetConfig
+from .config import DatasetConfig
 
 
-class AutoencoderDataset(Dataset):
+class Dataset(Dataset):
     def __init__(self, cfg: DatasetConfig):
         super().__init__()
         self._cfg = cfg

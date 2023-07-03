@@ -6,24 +6,32 @@ from torch.utils.data import DataLoader
 import torchvision
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from src.experiments.autoencoder.config import ExperimentConfig, Losses
-from src.experiments.autoencoder.dataset import AutoencoderDataset
-from src.experiments.autoencoder.autoencoder import AutoEncoder
-from typing import Tuple, Callable, Dict, Optional
+from .config import TrainerConfig
+from ...experiment.config import ExperimentConfig, ExpType
+from .config import Losses
+from ..dataset.dataset import Dataset
+from ..autoencoder.model import Model as Autoencoder
+from ..unet.model import Model as Unet
+from typing import Tuple, Callable, Dict, Optional, Type
 import time
 import math
 
 
-Prediction = Tensor
-Loss = Tensor
-Input = Tensor
-Target = Tensor
+_Prediction = Tensor
+_Loss = Tensor
+_Input = Tensor
+_Target = Tensor
 
 _loss_dict: Dict[Losses, Callable[[], nn.Module]] = {
     Losses.L1: torch.nn.L1Loss,
     Losses.MSE: torch.nn.MSELoss,
     Losses.CUSTOM_L1: torch.nn.L1Loss,
     Losses.CUSTOM_MSE: torch.nn.MSELoss,
+}
+
+_exp_type_to_model_class: Dict[ExpType, Type[nn.Module]] = {
+    ExpType.AUTOENCODER: Autoencoder,
+    ExpType.UNET: Unet
 }
 
 
@@ -33,7 +41,7 @@ class _LightningWrapper(L.LightningModule):
     def __init__(self, cfg: ExperimentConfig):
         super().__init__()
         self._cfg = cfg
-        self._model = AutoEncoder(cfg.model)
+        self._model = _exp_type_to_model_class[cfg.exp_type](cfg.model)
         self._loss_fn = self._build_loss_fn()
         self._val_sample_freq = None
         self._train_sample_freq = None
@@ -48,13 +56,13 @@ class _LightningWrapper(L.LightningModule):
             len(train_dataloader) / self._cfg.trainer.viz_sample_frequency
         )
 
-    def _build_loss_fn(self) -> Callable[[Input, Prediction, Target], Loss]:
+    def _build_loss_fn(self) -> Callable[[_Input, _Prediction, _Target], _Loss]:
         base_fn = _loss_dict[self._cfg.trainer.loss]()
         if self._cfg.trainer.loss in (Losses.CUSTOM_L1, Losses.CUSTOM_MSE):
 
             def loss_function(
-                input_: Input, prediction: Prediction, target: Target
-            ) -> Loss:
+                input_: _Input, prediction: _Prediction, target: _Target
+            ) -> _Loss:
                 mean_input = (input_[:, 0] + input_[:, 1]) / 2
                 y1 = prediction - mean_input
                 y2 = target - mean_input
@@ -64,8 +72,8 @@ class _LightningWrapper(L.LightningModule):
         else:
 
             def loss_function(
-                input_: Input, prediction: Prediction, target: Target
-            ) -> Loss:
+                input_: _Input, prediction: _Prediction, target: _Target
+            ) -> _Loss:
                 return base_fn(prediction, target)
 
             return loss_function
@@ -78,7 +86,7 @@ class _LightningWrapper(L.LightningModule):
 
     def _common_step(
         self, input_batch: Tuple[Tensor, Tensor]
-    ) -> Tuple[Prediction, Loss]:
+    ) -> Tuple[_Prediction, _Loss]:
         """Common step between train and validation step. Do forward pass and return prediction and loss"""
         x, y = input_batch
         y_hat = self(x)
@@ -134,12 +142,12 @@ class _LightningWrapper(L.LightningModule):
 class Trainer:
     def __init__(self, cfg: ExperimentConfig):
         self._exp_cfg = cfg
-        self._cfg = cfg.trainer
+        self._cfg: TrainerConfig = cfg.trainer
         self._model = _LightningWrapper(cfg)
-        self._train_dataset = AutoencoderDataset(cfg.dataset_train)
-        self._val_dataset: Optional[AutoencoderDataset] = None
+        self._train_dataset = Dataset(cfg.dataset_train)
+        self._val_dataset: Optional[Dataset] = None
         if cfg.trainer.use_validation:
-            self._val_dataset = AutoencoderDataset(cfg.dataset_val)
+            self._val_dataset = Dataset(cfg.dataset_val)
 
     def _get_max_batch_size_train(self) -> int:
         # Save model and optimizer states to reset after calculation
@@ -260,15 +268,15 @@ class Trainer:
         if batch_size_train is None:
             print("\rFinding best batch size for training...", end="")
             batch_size_train = self._get_max_batch_size_train()
-            print("best batch size train:", batch_size_train, "          ")
+            print("\rBest batch size train:", batch_size_train, "          ")
         train_loader = DataLoader(self._train_dataset, batch_size_train, shuffle=True)
         val_loader = None
         if self._cfg.use_validation:
             batch_size_val = self._cfg.batch_size_val
             if batch_size_val is None:
-                print("Finding best batch size for validation... ", end="")
+                print("\rFinding best batch size for validation... ", end="")
                 batch_size_val = self._get_max_batch_size_val()
-                print("best batch size val:", batch_size_val)
+                print("\rBest batch size val:", batch_size_val)
 
             val_loader = DataLoader(self._val_dataset, batch_size_val, shuffle=False)
         return train_loader, val_loader

@@ -1,12 +1,9 @@
-# Check src.experiments.autoencoder.config to learn more about the experiment configuration
-experiment_type: autoencoder 
-
-experiment_config:
-
+experiment:
   val_copy_train: True
-
+  exp_type: unet
+  
   model:
-    activation: leaky_relu # Check src.experiments.autoencoder.config.Activaions for full list
+    activation: leaky_relu
     depth: 4
     start_channels: 128
     dilation: 2.0
@@ -14,7 +11,7 @@ experiment_config:
     maxpool: False
 
   dataset_train:
-    input_size: 512, 512
+    input_size: 256, 256
     data_dir: ./data/train
     delta: 45
     sample_interval: 1
@@ -28,12 +25,10 @@ experiment_config:
   trainer:
     use_validation: True
     lr: 0.0005
-    loss: custom_mse # Check src.experiments.autoencoder.config.Losses for full list
+    loss: custom_mse
     early_stopping_patience: Null # No early stopping
-    # batch_size_train: Null # Let trainer figure out max batch_size
-    # batch_size_val: Null # Let trainer figure out max batch_size
-    batch_size_train: 3 # Let trainer figure out max batch_size
-    batch_size_val: 12 # Let trainer figure out max batch_size
+    batch_size_train: Null # Let trainer figure out max batch_size
+    batch_size_val: Null # Let trainer figure out max batch_size
     epochs: 5
     viz_sample_frequency: 4
     vis_sample_num: 4
