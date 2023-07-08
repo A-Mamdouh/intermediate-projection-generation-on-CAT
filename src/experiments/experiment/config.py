@@ -4,6 +4,9 @@ from ..unconditioned.autoencoder.config import ModelConfig as AutoencoderConfig
 from ..unconditioned.unet.config import ModelConfig as UnetConfig
 from ..unconditioned.dataset.config import DatasetConfig as UnconditionedDatsetConfig
 from ..unconditioned.trainer.config import TrainerConfig as UnconditionedTrainerConfig
+from ..conditioned.dataset.config import DatasetConfig as ConditionedDatasetConfig
+from ..conditioned.trainer.config import TrainerConfig as ConditionedTrainerConfig
+from ..conditioned.cunet.config import ModelConfig as CUnetConfig
 from src.utils.base_config import BaseConfig
 from typing import Dict, Tuple
 
@@ -11,11 +14,13 @@ from typing import Dict, Tuple
 class ExpType(Enum):
     AUTOENCODER = "autoencoder"
     UNET = "unet"
+    CUNET = "cunet"
 
 
 _exp_type_to_configs: Dict[ExpType, Tuple[BaseConfig, BaseConfig, BaseConfig]] = {
     ExpType.AUTOENCODER: (AutoencoderConfig, UnconditionedDatsetConfig, UnconditionedTrainerConfig),
-    ExpType.UNET: (UnetConfig, UnconditionedDatsetConfig, UnconditionedTrainerConfig)
+    ExpType.UNET: (UnetConfig, UnconditionedDatsetConfig, UnconditionedTrainerConfig),
+    ExpType.CUNET: (CUnetConfig, ConditionedDatasetConfig, ConditionedTrainerConfig)
 }
 
 

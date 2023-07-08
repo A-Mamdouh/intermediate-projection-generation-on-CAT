@@ -12,6 +12,6 @@ if __name__ == '__main__':
     if exp_config.exp_type in (ExpType.AUTOENCODER, ExpType.UNET):
         from ..unconditioned.trainer.trainer import Trainer
     else:
-        pass
+        from ..conditioned.trainer.trainer import Trainer
     trainer = Trainer(exp_config)
     trainer.train()
