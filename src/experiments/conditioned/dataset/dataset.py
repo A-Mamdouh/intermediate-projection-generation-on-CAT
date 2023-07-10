@@ -19,7 +19,7 @@ class Dataset(BaseDataset):
         self._max_angle = cfg.max_angle - self._delta
         self._angles_per_object = int(self._max_angle / self._sample_interval)
         height, width = self._cfg.input_size
-        self._label_size = height / (2**self._cfg.encoder_depth), width / (2**self._cfg.encoder_depth)
+        self._label_size = int(height / (2**self._cfg.encoder_depth)), int(width / (2**self._cfg.encoder_depth))
 
     def __len__(self) -> int:
         """Returns the number of different inputs to the model"""
@@ -28,7 +28,7 @@ class Dataset(BaseDataset):
     def _get_img(self, object_index: int, angle: int) -> torch.Tensor:
         """Load image from memory and preprocess if needed"""
         img_path = os.path.join(
-            self._cfg.data_dir, self._object_dirs[object_index], f"{angle:03}.png"
+            self._cfg.data_dir, self._object_dirs[object_index], f"{angle}.png"
         )
         img = Image.open(img_path).resize(self._cfg.input_size)
         img_tensor = pil_to_tensor(img)
@@ -45,7 +45,7 @@ class Dataset(BaseDataset):
         second_angle = first_angle + self._delta
         target_angle = first_angle + (index % self._delta)
         label = (index % self._delta) / self._delta
-        z = torch.ones((self._label_size)) * label
+        z = torch.ones((1, *self._label_size)) * label
         second_img = self._get_img(object_index, second_angle)
         first_img = self._get_img(object_index, first_angle)
         target_img = self._get_img(object_index, target_angle)

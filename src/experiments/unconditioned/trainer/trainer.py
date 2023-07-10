@@ -135,7 +135,7 @@ class _LightningWrapper(L.LightningModule):
         c3 = y_hat[::inv]
         c4 = y[::inv]
         grid = torch.concat((c1, c2, c3, c4), 1).view(-1, 1, c3.shape[-2], c3.shape[-1])
-        grid = torchvision.utils.make_grid(grid, nrows=4, normalize=True)
+        grid = torchvision.utils.make_grid(grid, nrow=4, normalize=True)
         return grid
 
 
@@ -282,7 +282,8 @@ class Trainer:
         return train_loader, val_loader
 
     def train(self):
-        logger = TensorBoardLogger("outputs/autoencoder")
+        exp_type = self._exp_cfg.exp_type
+        logger = TensorBoardLogger(f"outputs/{exp_type.value.lower()}")
         logger.log_hyperparams(self._exp_cfg.to_dict())
         monitoring_value = "val_loss" if self._cfg.use_validation else "train_loss"
         callbacks = [
@@ -304,7 +305,7 @@ class Trainer:
         self._model.set_val_sample_freq(val_loader)
         trainer = L.Trainer(
             logger=logger,
-            accelerator="gpu",  # TODO: Figure out multi-GPU config
+            accelerator=self._exp_cfg.accelerator,  # TODO: Figure out multi-GPU config
             devices=1,  # TODO: Figure out multi-GPU config
             max_epochs=self._cfg.epochs,
             log_every_n_steps=1,

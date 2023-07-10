@@ -8,7 +8,7 @@ from ..conditioned.dataset.config import DatasetConfig as ConditionedDatasetConf
 from ..conditioned.trainer.config import TrainerConfig as ConditionedTrainerConfig
 from ..conditioned.cunet.config import ModelConfig as CUnetConfig
 from src.utils.base_config import BaseConfig
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 
 class ExpType(Enum):
@@ -32,20 +32,22 @@ class ExperimentConfig(BaseConfig):
     dataset_train: BaseConfig
     dataset_val: BaseConfig
     trainer: BaseConfig
+    accelerator: Optional[str] = "cpu"
     # If true, copy missing validation dataset keys from train dataset
     val_copy_train: bool = True
 
     @staticmethod
     def from_dict(raw_dict) -> "ExperimentConfig":
-        # TODO Fix this function to accept exp type
-        exp_type = ExpType(raw_dict["exp_type"])
-        ModelConfig, DatasetConfig, TrainerConfig = _exp_type_to_configs[exp_type]
-        model_config = ModelConfig.from_dict(raw_dict["model"])
-        dataset_train = DatasetConfig.from_dict(raw_dict["dataset_train"])
-        val_copy_train = raw_dict["val_copy_train"]
-        if val_copy_train:
-            dataset_val = DatasetConfig.from_dict({**raw_dict["dataset_train"], **raw_dict["dataset_val"]})
+        config = {}
+        config["exp_type"] = ExpType(raw_dict["exp_type"])
+        ModelConfig, DatasetConfig, TrainerConfig = _exp_type_to_configs[config["exp_type"]]
+        config["model"] = ModelConfig.from_dict(raw_dict["model"])
+        config["dataset_train"] = DatasetConfig.from_dict(raw_dict["dataset_train"])
+        config["val_copy_train"] = raw_dict["val_copy_train"]
+        if config["val_copy_train"]:
+            config["dataset_val"] = DatasetConfig.from_dict({**raw_dict["dataset_train"], **raw_dict["dataset_val"]})
         else:
-            dataset_val = DatasetConfig.from_dict(raw_dict["dataset_val"])
-        trainer = TrainerConfig.from_dict(raw_dict["trainer"])
-        return ExperimentConfig(exp_type, model_config, dataset_train, dataset_val, trainer, val_copy_train)
+            config["dataset_val"] = DatasetConfig.from_dict(raw_dict["dataset_val"])
+        config["trainer"] = TrainerConfig.from_dict(raw_dict["trainer"])
+        config = {**raw_dict, **config}
+        return ExperimentConfig(**config)

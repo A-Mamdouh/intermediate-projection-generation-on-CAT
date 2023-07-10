@@ -76,8 +76,8 @@ class _LightningWrapper(L.LightningModule):
 
             return loss_function
 
-    def forward(self, x: Tensor) -> Tensor:
-        return self._model(x)
+    def forward(self, x: Tensor, z: Tensor) -> Tensor:
+        return self._model(x, z)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(self._model.parameters(), lr=self._cfg.trainer.lr)
@@ -86,13 +86,13 @@ class _LightningWrapper(L.LightningModule):
         self, input_batch: Tuple[Tensor, Tensor]
     ) -> Tuple[_Prediction, _Loss]:
         """Common step between train and validation step. Do forward pass and return prediction and loss"""
-        x, y = input_batch
-        y_hat = self(x)
+        (x, z), y = input_batch
+        y_hat = self(x, z)
         loss = self._loss_fn(x, y_hat, y)
         return y_hat, loss
 
     def training_step(self, train_batch: Tuple[Tensor, Tensor], batch_idx) -> Tensor:
-        x, y = train_batch
+        (x, z), y = train_batch
         y_hat, loss = self._common_step(train_batch)
         self.log_dict(
             {
@@ -109,7 +109,7 @@ class _LightningWrapper(L.LightningModule):
         return loss
 
     def validation_step(self, val_batch, batch_idx) -> None:
-        x, y = val_batch
+        (x, z), y = val_batch
         y_hat, loss = self._common_step(val_batch)
         self.log_dict(
             {
@@ -133,7 +133,7 @@ class _LightningWrapper(L.LightningModule):
         c3 = y_hat[::inv]
         c4 = y[::inv]
         grid = torch.concat((c1, c2, c3, c4), 1).view(-1, 1, c3.shape[-2], c3.shape[-1])
-        grid = torchvision.utils.make_grid(grid, nrows=4, normalize=True)
+        grid = torchvision.utils.make_grid(grid, nrow=4, normalize=True)
         return grid
 
 
@@ -280,7 +280,8 @@ class Trainer:
         return train_loader, val_loader
 
     def train(self):
-        logger = TensorBoardLogger("outputs/autoencoder")
+        exp_type = self._exp_cfg.exp_type
+        logger = TensorBoardLogger(f"outputs/{exp_type.value.lower()}")
         logger.log_hyperparams(self._exp_cfg.to_dict())
         monitoring_value = "val_loss" if self._cfg.use_validation else "train_loss"
         callbacks = [
@@ -302,7 +303,7 @@ class Trainer:
         self._model.set_val_sample_freq(val_loader)
         trainer = L.Trainer(
             logger=logger,
-            accelerator="mps",  # TODO: Figure out multi-GPU config
+            accelerator=self._exp_cfg.accelerator,  # TODO: Figure out multi-GPU config
             devices=1,  # TODO: Figure out multi-GPU config
             max_epochs=self._cfg.epochs,
             log_every_n_steps=1,

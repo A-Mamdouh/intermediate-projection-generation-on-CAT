@@ -26,7 +26,7 @@ class Dataset(Dataset):
     def _get_img(self, object_index: int, angle: int) -> torch.Tensor:
         """Load image from memory and preprocess if needed"""
         img_path = os.path.join(
-            self._cfg.data_dir, self._object_dirs[object_index], f"{angle:03}.png"
+            self._cfg.data_dir, self._object_dirs[object_index], f"{angle}.png"
         )
         img = Image.open(img_path).resize(self._cfg.input_size)
         img_tensor = pil_to_tensor(img)

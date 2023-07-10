@@ -13,5 +13,7 @@ if __name__ == '__main__':
         from ..unconditioned.trainer.trainer import Trainer
     else:
         from ..conditioned.trainer.trainer import Trainer
+    from rich import print
+    print(exp_config)
     trainer = Trainer(exp_config)
     trainer.train()
