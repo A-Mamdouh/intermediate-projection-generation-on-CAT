@@ -2,7 +2,8 @@ import yaml
 import sys
 from .config import ExperimentConfig, ExpType
 
-if __name__ == '__main__':
+
+def main():
     cfg_path = "./config/example.yml"
     if len(sys.argv) == 2:
         cfg_path = sys.argv[-1]
@@ -17,3 +18,7 @@ if __name__ == '__main__':
     print(exp_config)
     trainer = Trainer(exp_config)
     trainer.train()
+
+
+if __name__ == '__main__':
+    main()

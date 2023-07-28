@@ -160,6 +160,8 @@ class Trainer:
         best_dps = 0
         best_batch_size = 1
         input_size = self._exp_cfg.dataset_train.input_size
+        height, width = input_size
+        label_size = int(height / (2**self._exp_cfg.dataset_train.encoder_depth)), int(width / (2**self._exp_cfg.dataset_train.encoder_depth))
         while True:
             batch_size += 1
             try:
@@ -167,11 +169,13 @@ class Trainer:
                 torch.cuda.reset_peak_memory_stats()
                 x = torch.rand((batch_size, 2, *input_size), device="cpu")
                 y = torch.rand((batch_size, 1, *input_size), device="cpu")
+                z = torch.rand((batch_size, 1, *label_size), device="cpu")
                 # Run one batch to run memory allocation first
                 x_ = x.cuda()
                 y_ = y.cuda()
+                z_ = z.cuda()
                 optimizer.zero_grad()
-                y_hat = model(x_)
+                y_hat = model(x_, z_)
                 loss = loss_fn(x_, y_, y_hat)
                 loss.backward()
                 optimizer.step()
@@ -180,8 +184,9 @@ class Trainer:
                 for _ignored in range(20):
                     x_ = x.cuda()
                     y_ = y.cuda()
+                    z_ = z.cuda()
                     optimizer.zero_grad()
-                    y_hat = model(x_)
+                    y_hat = model(x_, z_)
                     loss = loss_fn(x_, y_, y_hat)
                     loss.backward()
                     optimizer.step()
@@ -217,6 +222,9 @@ class Trainer:
         best_dps = 0
         best_batch_size = 1
         input_size = self._exp_cfg.dataset_train.input_size
+        input_size = self._exp_cfg.dataset_train.input_size
+        height, width = input_size
+        label_size = int(height / (2**self._exp_cfg.dataset_train.encoder_depth)), int(width / (2**self._exp_cfg.dataset_train.encoder_depth))
         while True:
             batch_size += 1
             try:
@@ -228,11 +236,13 @@ class Trainer:
                 y = torch.rand(
                     (batch_size, 1, *input_size), device="cpu", requires_grad=False
                 )
+                z = torch.rand((batch_size, 1, *label_size), device="cpu", requires_grad=False)
                 # Run one batch to run memory allocation first
                 x_ = x.cuda()
                 y_ = y.cuda()
+                z_ = z.cuda()
                 with torch.no_grad():
-                    y_hat = model(x_)
+                    y_hat = model(x_, z_)
                     loss_fn(x_, y_, y_hat)
                 # Start timer
                 with torch.no_grad():
@@ -240,7 +250,8 @@ class Trainer:
                     for _ignored in range(20):
                         x_ = x.cuda()
                         y_ = y.cuda()
-                        y_hat = model(x_)
+                        z_ = z.cuda()
+                        y_hat = model(x_, z_)
                         loss_fn(x_, y_, y_hat)
                     duration = time.time() - start
                 dps = batch_size * 20 / duration
