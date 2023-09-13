@@ -57,6 +57,7 @@ def double_conv(
     kernel_size: int = 3,
     stride: int = 1,
     padding: str = "same",
+    dropout: float=0.25
 ) -> ModuleBlock:
     if middle_channels is None:
         middle_channels = out_channels
@@ -67,18 +68,19 @@ def double_conv(
         *conv_block(
             middle_channels, out_channels, Activation, kernel_size, stride, padding
         ),
+        nn.Dropout2d(dropout),
     ]
 
 
 def down(
-    in_channels: int, out_channels: int, Activation: Callable, maxpool: bool
+    in_channels: int, out_channels: int, Activation: Callable, maxpool: bool, dropout: float=0.25
 ) -> ModuleBlock:
     layers = []
     if maxpool:
         layers.append(nn.Maxpool2D())
     else:
         layers.extend(conv_block(in_channels, in_channels, Activation, stride=2))
-    layers.extend(double_conv(in_channels, out_channels, Activation))
+    layers.extend(double_conv(in_channels, out_channels, Activation, dropout=dropout))
     return layers
 
 
@@ -88,6 +90,7 @@ def up(
     Activation: Callable,
     up_sample: bool,
     middle_channels: Optional[int] = None,
+    dropout=0.25
 ) -> ModuleBlock:
     layers = []
     if middle_channels is None:
@@ -96,5 +99,5 @@ def up(
         layers.append(nn.Upsample(scale_factor=2))
     else:
         layers.extend(convt_block(in_channels, in_channels))
-    layers.extend(double_conv(middle_channels, out_channels, Activation))
+    layers.extend(double_conv(middle_channels, out_channels, Activation, dropout=dropout))
     return layers

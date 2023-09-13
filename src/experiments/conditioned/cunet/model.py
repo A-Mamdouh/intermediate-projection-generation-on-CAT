@@ -13,10 +13,11 @@ _activation_dict = {
 
 
 class Model(nn.Module):
-    def __init__(self, cfg: ModelConfig):
+    def __init__(self, cfg: ModelConfig, dropout: float=0.25):
         super().__init__()
         self._cfg = cfg
         self._Activation = _activation_dict[cfg.activation]
+        self.dropout = dropout
         self._module_list, self._encoder_blks, self._decoder_blks = self._build()
 
     def _build(self) -> Tuple[nn.ModuleList, List[List[nn.Module]], List[List[nn.Module]]]:
@@ -44,7 +45,8 @@ class Model(nn.Module):
                     in_channels,
                     self._Activation,
                     self._cfg.up_sample,
-                    middle_channels=in_channels + out_channels
+                    middle_channels=in_channels + out_channels,
+                    dropout=self.dropout
                 )
             )
         # Add final conv layer for prediction to final decoder layer
@@ -71,6 +73,11 @@ class Model(nn.Module):
             for layer in layers:
                 x = layer(x)
         return x
+    
+    def load_ckpt(self, fname):
+        state_dict = torch.load(fname)['state_dict']
+        state_dict = {'.'.join(key.split('.')[1:]): value for key, value in state_dict.items()}
+        self.load_state_dict(state_dict)
 
 
 if __name__ == '__main__':
