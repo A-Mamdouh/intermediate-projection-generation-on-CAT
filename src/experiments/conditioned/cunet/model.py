@@ -25,7 +25,7 @@ class Model(nn.Module):
         dilation = self._cfg.dilation
         # Keep encoder and decoder layers in lists
         # Encoder starts with a double conv layer to convert input_channels to start channels
-        encoder = [double_conv(2, start_channels, self._Activation)]
+        encoder = [double_conv(2, start_channels, self._Activation, dropout=self.dropout)]
         # Decoder starts with the output prediction layer (1x1 conv with 1 channel. i.e. pixel-wise FC layer)
         decoder = []
         for d in range(self._cfg.depth):
@@ -33,7 +33,7 @@ class Model(nn.Module):
             in_channels = int(start_channels * (dilation**d))
             out_channels = int(in_channels * dilation)
             encoder.append(
-                down(in_channels, out_channels, self._Activation, self._cfg.maxpool)
+                down(in_channels, out_channels, self._Activation, self._cfg.maxpool, dropout=self.dropout)
             )
             # Extend decoder with reversed decoder layer since the decoder list holds the reversed decoder blocks
             if d == self._cfg.depth - 1:
