@@ -1,8 +1,10 @@
 # Data files
 data/
+data_old
 
 # Experiments output
 outputs/
+outputs_local/
 # Experiments configurations
 config/*
 !config/example.yml

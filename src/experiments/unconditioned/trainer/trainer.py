@@ -58,25 +58,28 @@ class _LightningWrapper(L.LightningModule):
 
     def _build_loss_fn(self) -> Callable[[_Input, _Prediction, _Target], _Loss]:
         base_fn = _loss_dict[self._cfg.trainer.loss]()
-        if self._cfg.trainer.loss in (Losses.CUSTOM_L1, Losses.CUSTOM_MSE):
-
-            def loss_function(
-                input_: _Input, prediction: _Prediction, target: _Target
-            ) -> _Loss:
-                mean_input = (input_[:, 0] + input_[:, 1]) / 2
-                y1 = prediction - mean_input
-                y2 = target - mean_input
-                return base_fn(y1, y2)
-
-            return loss_function
+        if self._cfg.trainer.loss is Losses.CUSTOM_MSE:
+            def loss_function(input_: _Input, prediction: _Prediction, target: _Target) -> _Loss:
+                # Histogram loss
+                boundaries = torch.arange(0, 1.00001, 1.0 /20, device=prediction.device)
+                bucketized = torch.bucketize(target, boundaries=boundaries)
+                _, inverses, counts = torch.unique(bucketized, return_counts=True, return_inverse=True)
+                f = counts[inverses]
+                return torch.sum(torch.sqrt(torch.square(prediction - target)) / f)
+        elif self._cfg.trainer.loss is Losses.CUSTOM_L1:
+            def loss_function(input_: _Input, prediction: _Prediction, target: _Target) -> _Loss:
+                # Histogram loss
+                boundaries = torch.arange(0, 1.00001, 1.0 /20, device=prediction.device)
+                bucketized = torch.bucketize(target, boundaries=boundaries)
+                _, inverses, counts = torch.unique(bucketized, return_counts=True, return_inverse=True)
+                f = counts[inverses]
+                return torch.sum(torch.abs(prediction - target) / f)
         else:
-
             def loss_function(
                 input_: _Input, prediction: _Prediction, target: _Target
             ) -> _Loss:
                 return base_fn(prediction, target)
-
-            return loss_function
+        return loss_function
 
     def forward(self, x: Tensor) -> Tensor:
         return self._model(x)
@@ -281,9 +284,12 @@ class Trainer:
             val_loader = DataLoader(self._val_dataset, batch_size_val, shuffle=False)
         return train_loader, val_loader
 
-    def train(self):
+    def train(self, caller):
+        if caller != "__main__":
+            return
         exp_type = self._exp_cfg.exp_type
-        logger = TensorBoardLogger(f"outputs/{exp_type.value.lower()}")
+        output_path = self._cfg.out_path
+        logger = TensorBoardLogger(f"{output_path}/{exp_type.value.lower()}")
         logger.log_hyperparams(self._exp_cfg.to_dict())
         monitoring_value = "val_loss" if self._cfg.use_validation else "train_loss"
         callbacks = [
@@ -302,20 +308,26 @@ class Trainer:
             )
         train_loader, val_loader = self._get_data_loaders()
         self._model.set_train_sample_freq(train_loader)
-        self._model.set_val_sample_freq(val_loader)
-        trainer = L.Trainer(
+        if self._cfg.use_validation:
+            self._model.set_val_sample_freq(val_loader)
+        trainer_params = dict(
+            enable_progress_bar=self._cfg.progress_bar,
             logger=logger,
-            accelerator=self._exp_cfg.accelerator,  # TODO: Figure out multi-GPU config
-            devices=1,  # TODO: Figure out multi-GPU config
+            accelerator=self._exp_cfg.accelerator,
+            devices=self._cfg.devices,
             max_epochs=self._cfg.epochs,
             log_every_n_steps=1,
             callbacks=callbacks,
         )
+        if self._cfg.devices != 1:
+            trainer_params["strategy"] = "ddp"
+        trainer = L.Trainer(**trainer_params)
         if val_loader is None:
-            trainer.fit(model=self._model, train_dataloaders=train_loader)
+            trainer.fit(model=self._model, train_dataloaders=train_loader, ckpt_path=self._cfg.resume)
         else:
             trainer.fit(
                 model=self._model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader,
+                ckpt_path=self._cfg.resume
             )

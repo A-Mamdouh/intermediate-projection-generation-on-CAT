@@ -28,6 +28,10 @@ class TrainerConfig(BaseConfig):
     use_validation: bool = True
     viz_sample_frequency: int = 4
     vis_sample_num: int = 2
+    out_path: str = "./output"
+    devices: int = 1
+    progress_bar: bool = True
+    resume: Optional[str] = None
 
     @staticmethod
     def from_dict(raw_dict) -> "TrainerConfig":

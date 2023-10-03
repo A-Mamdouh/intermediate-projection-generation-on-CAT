@@ -13,7 +13,7 @@ experiment:
 
   dataset_train:
     input_size: 256, 256
-    data_dir: ./data/train
+    data_dir: ./data/small/train
     delta: 45
     sample_interval: 1
     max_angle: 180
@@ -22,15 +22,19 @@ experiment:
   
   dataset_val:
     sample_interval: 5
-    data_dir: ./data/val
+    data_dir: ./data/small/val
   
   trainer:
     use_validation: True
-    lr: 0.0005
+    lr: 0.00005
     loss: custom_mse
     early_stopping_patience: Null # No early stopping
-    batch_size_train: Null # Let trainer figure out max batch_size
-    batch_size_val: Null # Let trainer figure out max batch_size
-    epochs: 5
+    batch_size_train: 12
+    batch_size_val: 24
+    epochs: 20
     viz_sample_frequency: 4
     vis_sample_num: 4
+    out_path: ./outputs/
+    devices: 1
+    progress_bar: true
+    resume: ./outputs/cunet/lightning_logs/version_2/checkpoints/best_loss.ckpt

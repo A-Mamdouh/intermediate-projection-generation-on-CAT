@@ -24,6 +24,23 @@ class Dataset(BaseDataset):
     def __len__(self) -> int:
         """Returns the number of different inputs to the model"""
         return self._num_objects * self._angles_per_object * self._delta
+    
+    @property
+    def n_items(self) -> int:
+        """Returns the number of objects"""
+        return self._num_objects
+    
+    def get_for_prediction(self, object_id: int, angle: int):
+        left_anchor = int(angle / self._delta) * self._delta
+        right_anchor = (left_anchor + self._delta) % 360
+        left_img = self._get_img(object_id, left_anchor)
+        right_img = self._get_img(object_id, right_anchor)
+        target_img = self._get_img(object_id, angle)
+        z = (angle % self._delta) / self._delta
+        z = torch.ones((1, *self._label_size)) * z
+        x = torch.cat([left_img, right_img], 0)
+        return (x, z), target_img
+
 
     def _get_img(self, object_index: int, angle: int) -> torch.Tensor:
         """Load image from memory and preprocess if needed"""
